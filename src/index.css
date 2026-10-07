@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #faf9f5;
+  --color-surface-dim: #dbdad6;
+  --color-surface-bright: #faf9f5;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f4f0;
+  --color-surface-container: #efeeea;
+  --color-surface-container-high: #e9e8e4;
+  --color-surface-container-highest: #e3e2df;
+  --color-on-surface: #1b1c1a;
+  --color-on-surface-variant: #454743;
+  --color-inverse-surface: #191918;
+  --color-inverse-on-surface: #f2f1ed;
+  --color-outline: #767872;
+  --color-outline-variant: #c6c7c0;
+  --color-primary: #191918;
+  --color-on-primary: #ffffff;
+  --color-secondary: #785838;
+  --color-on-secondary: #ffffff;
+
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Cinzel', serif;
+  --font-modern: 'Outfit', sans-serif;
+}
+
+/* ── Dynamic Theme Palette Overrides ── */
+:root {
+  --theme-accent: #C5A880;
+  --theme-accent-hover: #b8986c;
+  --theme-primary: #0B1B3D;
+  --theme-bg: #FAF8F5;
+  --theme-card-bg: #FFFFFF;
+  --theme-border: #EAE4D9;
+}
+
+.bg-\[\#C5A880\] {
+  background-color: var(--theme-accent) !important;
+}
+.text-\[\#C5A880\] {
+  color: var(--theme-accent) !important;
+}
+.border-\[\#C5A880\] {
+  border-color: var(--theme-accent) !important;
+}
+.hover\:border-\[\#C5A880\]:hover {
+  border-color: var(--theme-accent) !important;
+}
+.hover\:text-\[\#C5A880\]:hover {
+  color: var(--theme-accent) !important;
+}
+.bg-\[\#FAF8F5\] {
+  background-color: var(--theme-bg) !important;
+}
+.text-\[\#0B1B3D\] {
+  color: var(--theme-primary) !important;
+}
+.border-\[\#EAE4D9\] {
+  border-color: var(--theme-border) !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f4f0;
+}
+::-webkit-scrollbar-thumb {
+  background: #c6c7c0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #785838;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+/* ── Fullscreen Video Cinema Support ── */
+:fullscreen, :-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: #000000 !important;
+  border-radius: 0 !important;
+}
+:fullscreen iframe, :-webkit-full-screen iframe {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── Luxury Skeleton Shimmer (No Blink, Continuous Wave) ── */
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-box {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.skeleton-box::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.06) 20%,
+    rgba(255, 255, 255, 0.16) 50%,
+    rgba(255, 255, 255, 0.06) 80%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: skeleton-shimmer 2s infinite ease-in-out;
+  content: '';
+}
+
+.skeleton-gold {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(197, 168, 128, 0.18);
+}
+
+.skeleton-gold::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(197, 168, 128, 0) 0%,
+    rgba(197, 168, 128, 0.12) 20%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(197, 168, 128, 0.12) 80%,
+    rgba(197, 168, 128, 0) 100%
+  );
+  animation: skeleton-shimmer 2s infinite ease-in-out;
+  content: '';
+}
