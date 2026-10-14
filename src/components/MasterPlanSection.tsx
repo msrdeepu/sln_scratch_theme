@@ -4,9 +4,9 @@ import InteractiveMasterPlan from './InteractiveMasterPlan';
 import { InteractiveMapPlot } from '../types/interactiveMap';
 
 interface MasterPlanSectionProps {
-  theme: TemplateTheme;
+  theme?: any;
   venture: VentureData;
-  onEnquireClick: () => void;
+  onEnquireClick?: () => void;
   onSelectPlotForEnquiry?: (plot: InteractiveMapPlot) => void;
 }
 
@@ -16,7 +16,7 @@ export default function MasterPlanSection({
   onEnquireClick,
   onSelectPlotForEnquiry,
 }: MasterPlanSectionProps) {
-  const isDark = theme.isDark;
+  const isDark = Boolean(theme?.isDark);
 
 
 
@@ -38,7 +38,7 @@ export default function MasterPlanSection({
       id="master-plan"
       style={{
         backgroundColor: isDark ? '#0A0F1D' : '#FFFFFF',
-        color: isDark ? '#FFFFFF' : theme.textPrimary,
+        color: isDark ? '#FFFFFF' : (theme?.textPrimary || '#1E293B'),
       }}
       className="py-20 lg:py-28 border-b border-black/5 dark:border-white/10 relative transition-colors duration-500"
     >
@@ -47,9 +47,9 @@ export default function MasterPlanSection({
         <div className="pb-6 border-b border-black/5 dark:border-white/10">
           <div className="space-y-3 max-w-3xl">
             <div className="flex items-center gap-2">
-              <span style={{ backgroundColor: theme.accent }} className="w-8 h-[2px]" />
+              <span style={{ backgroundColor: theme?.accent || '#E11D48' }} className="w-8 h-[2px]" />
               <span
-                style={{ color: theme.accent }}
+                style={{ color: theme?.accent || '#E11D48' }}
                 className="font-sans text-xs font-extrabold uppercase tracking-[0.2em]"
               >
                 {displayEyebrow}
@@ -57,8 +57,8 @@ export default function MasterPlanSection({
             </div>
             <h2
               style={{
-                fontFamily: theme.fontHeading,
-                color: isDark ? '#FFFFFF' : theme.textPrimary,
+                fontFamily: theme?.fontHeading || 'inherit',
+                color: isDark ? '#FFFFFF' : (theme?.textPrimary || '#0F172A'),
               }}
               className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-tight"
             >
@@ -67,7 +67,7 @@ export default function MasterPlanSection({
               ) : (
                 <>
                   Master Layout &{' '}
-                  <span className="italic" style={{ color: theme.accent }}>
+                  <span className="italic" style={{ color: theme?.accent || '#E11D48' }}>
                     Plot Architecture
                   </span>
                 </>
@@ -85,8 +85,6 @@ export default function MasterPlanSection({
           theme={theme}
           onSelectPlotForEnquiry={onSelectPlotForEnquiry}
         />
-
-
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
 import { defineConfig, loadEnv } from 'vite'
 
 function escapeHtml(str: string): string {
@@ -133,6 +134,11 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       dynamicCmsSeoPlugin(env),
     ],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
     server: {
       host: true,
       port: 3001,

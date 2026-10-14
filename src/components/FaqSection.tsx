@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { TemplateTheme, VentureData } from '../types';
+import { VentureData } from '../types';
+import { ChevronDown } from 'lucide-react';
 
 interface FaqSectionProps {
-  theme: TemplateTheme;
+  theme?: any;
   venture: VentureData;
 }
 
-export default function FaqSection({ theme, venture }: FaqSectionProps) {
+export default function FaqSection({ venture }: FaqSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   const curatedFaqs = [
@@ -38,54 +39,43 @@ export default function FaqSection({ theme, venture }: FaqSectionProps) {
     : curatedFaqs;
 
   return (
-    <section id="faq" className="py-24 lg:py-32 bg-[#FAF8F5] border-b border-[#EAE4D9]">
-      <div className="max-w-[1100px] mx-auto px-6 sm:px-8 space-y-16">
-        {/* Section Header */}
-        <div className="text-center space-y-4 max-w-2xl mx-auto">
-          <div className="flex items-center justify-center gap-3">
-            <span className="w-8 h-[1.5px] bg-[#C5A880]"></span>
-            <span className="text-xs uppercase font-extrabold tracking-[0.25em] text-[#C5A880]">
-              Investor Clarifications
-            </span>
-            <span className="w-8 h-[1.5px] bg-[#C5A880]"></span>
-          </div>
-
-          <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#0B1B3D]">
-            Frequently Addressed Questions
+    <section id="faqs" className="py-20 lg:py-28 bg-[#fafaf9] border-b border-zinc-200/90 text-zinc-900 relative">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        {/* Section Header: Standardized heading without chip badge or subtitle */}
+        <div className="text-center max-w-2xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-zinc-900 tracking-tight leading-tight">
+            Frequently Asked Questions
           </h2>
-
-          <p className="text-base text-[#556477] font-light leading-relaxed">
-            Essential facts regarding legal titles, bank approvals, possession timelines, and
-            infrastructure standards.
-          </p>
         </div>
 
         {/* Minimalist Accordions */}
-        <div className="divide-y divide-[#EAE4D9] border-y border-[#EAE4D9] bg-white rounded-sm px-6 sm:px-10 shadow-sm">
+        <div className="divide-y divide-zinc-200/80 border border-zinc-200/90 bg-white rounded-2xl px-6 sm:px-8 shadow-xs">
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             return (
-              <div key={index} className="py-6 sm:py-7 transition-colors">
+              <div key={index} className="py-5 sm:py-6 transition-colors">
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : index)}
-                  className="w-full text-left flex items-start justify-between gap-6 cursor-pointer group"
+                  className="w-full flex items-center justify-between text-left gap-4 cursor-pointer group"
                 >
-                  <span className="font-serif text-lg sm:text-xl font-bold text-[#0B1B3D] group-hover:text-[#C5A880] transition-colors leading-snug">
+                  <span className="font-bold text-sm sm:text-base text-zinc-900 group-hover:text-emerald-700 transition-colors">
                     {faq.q}
                   </span>
-                  <span
-                    className={`w-7 h-7 rounded-full border border-[#EAE4D9] flex items-center justify-center shrink-0 mt-0.5 text-[#C5A880] transition-transform duration-300 ${
-                      isOpen ? 'rotate-180 bg-[#0B1B3D] text-white border-[#0B1B3D]' : 'bg-[#FAF8F5]'
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all shrink-0 ${
+                      isOpen
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 rotate-180'
+                        : 'border-zinc-200 text-zinc-400 group-hover:border-zinc-400'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                  </span>
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
                 </button>
 
                 {isOpen && (
-                  <div className="pt-4 pr-12 text-sm text-[#556477] font-light leading-relaxed animate-fadeIn">
-                    <p>{faq.a}</p>
+                  <div className="mt-3 text-xs sm:text-sm text-zinc-600 font-normal leading-relaxed pr-8">
+                    {faq.a}
                   </div>
                 )}
               </div>

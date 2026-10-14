@@ -980,7 +980,7 @@ export default function InteractiveMasterPlan({
               <button
                 type="button"
                 onClick={() => handleBookSiteVisit(selectedPlot)}
-                style={{ backgroundColor: theme.accent, color: '#0B1B3D' }}
+                style={{ backgroundColor: theme?.accent || '#E11D48', color: '#FFFFFF' }}
                 className="w-full py-3.5 rounded-xl font-sans text-xs font-extrabold uppercase tracking-wider shadow-lg hover:brightness-105 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">calendar_month</span>

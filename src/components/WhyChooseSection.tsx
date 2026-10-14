@@ -1,142 +1,97 @@
 import React from 'react';
-import { TemplateTheme, VentureData } from '../types';
+import { VentureData } from '../types';
+import { Card, CardTitle, CardDescription } from './ui/card';
+import { Badge } from './ui/badge';
+import { Compass, TrendingUp, ShieldCheck } from 'lucide-react';
 
 interface WhyChooseSectionProps {
-  theme: TemplateTheme;
   venture: VentureData;
 }
 
-export default function WhyChooseSection({ theme, venture }: WhyChooseSectionProps) {
-  const fallbackPillars = [
-    {
-      num: '01',
-      tag: 'Strategic Nexus',
-      title: 'Tada-Sri City Growth Gateway',
-      desc: 'Positioned signal-free along the Chennai-Nellore NH-16 highway, placing major industrial corridors, Tada railway junction, and logistics hubs within minutes.',
-      points: [
-        '5 Mins to Tada Railway Junction',
-        'Direct 6-lane signal-free artery to North Chennai',
-        'Adjacent to international industrial logistics corridor',
-      ],
-    },
-    {
-      num: '02',
-      tag: 'Capital Appreciation',
-      title: 'High-Yield Industrial Synergy',
-      desc: 'Flanked by Sri City SEZ housing 220+ Fortune-500 giants (Kellogg’s, Mondelez, Isuzu, Alstom) with over 65,000 professionals creating continuous land and rental demand.',
-      points: [
-        'Demonstrated 18–24% historic annual land appreciation',
-        'Expanding social infrastructure with universities & hospitals',
-        'Sustained corporate housing demand in Tada zone',
-      ],
-    },
-    {
-      num: '03',
-      tag: 'Legal Integrity',
-      title: '100% Clear Title & Spot Registry',
-      desc: 'Complete statutory and legal transparency with sanctioned layout certification, verified titles, and pre-approved project clearance from leading institutional banks.',
-      points: [
-        'Immediate spot registration upon plot allocation',
-        'Pre-approved mortgage assistance: SBI, HDFC, ICICI',
-        'Unencumbered freehold ownership title',
-      ],
-    },
-  ];
+export default function WhyChooseSection({ venture }: WhyChooseSectionProps) {
+  const pillars = Array.isArray(venture.whyChoosePoints) && venture.whyChoosePoints.length > 0
+    ? venture.whyChoosePoints
+    : [
+        {
+          tag: 'Strategic Nexus',
+          title: 'Prime Growth Corridor',
+          description: 'Positioned signal-free along major expressways, placing employment hubs and rapid transit corridors within easy access.',
+          icon: 'Compass',
+        },
+        {
+          tag: 'Capital Appreciation',
+          title: 'High-Yield Investment Potential',
+          description: 'Surrounded by rapidly developing commercial and residential infrastructure, driving consistent long-term land appreciation.',
+          icon: 'TrendingUp',
+        },
+        {
+          tag: 'Legal Integrity',
+          title: '100% Clear Title & Spot Registry',
+          description: 'Complete statutory and legal certainty with approved layout certification, verified freehold deeds, and immediate registration.',
+          icon: 'ShieldCheck',
+        },
+      ];
 
-  const pillars = (venture.whyChoosePoints && venture.whyChoosePoints.length > 0)
-    ? venture.whyChoosePoints.map((p, idx) => ({
-        num: String(idx + 1).padStart(2, '0'),
-        tag: p.tag || 'Value Factor',
-        title: p.title || 'Investment Pillar',
-        desc: p.description || (p as any).desc || '',
-        points: Array.isArray(p.points) ? p.points : [],
-      }))
-    : fallbackPillars;
-
-  const specs: Array<{ value: string; label: string; sub: string }> =
-    (venture as any)?.specs && (venture as any).specs.length > 0
-      ? (venture as any).specs
-      : [
-          { value: '180+', label: 'Gated Villa Plots', sub: 'Approved Layout' },
-          { value: '40 & 50 Ft', label: 'Internal Blacktop Avenues', sub: 'Engineered for Heavy Traffic' },
-          { value: '100%', label: 'Vaastu Orientation', sub: 'East & North Facing Alignments' },
-          { value: '24/7', label: 'Guarded Gated Perimeter', sub: 'Full Masonry Compound Wall' },
-          { value: 'Instant', label: 'Spot Registration', sub: 'Ready for Immediate Possession' },
-        ];
+  const getIcon = (tag: string, iconName?: string) => {
+    const t = (tag || '').toLowerCase();
+    if (t.includes('location') || t.includes('nexus') || iconName === 'Compass') {
+      return <Compass className="w-5 h-5 text-emerald-600" />;
+    }
+    if (t.includes('appreciation') || t.includes('growth') || iconName === 'TrendingUp') {
+      return <TrendingUp className="w-5 h-5 text-sky-600" />;
+    }
+    return <ShieldCheck className="w-5 h-5 text-amber-600" />;
+  };
 
   return (
-    <section id="why-choose" className="py-24 lg:py-32 bg-white border-b border-[#EAE4D9]">
-      <div className="max-w-[1440px] mx-auto px-6 sm:px-8 lg:px-12 space-y-20">
+    <section id="why-choose" className="py-20 lg:py-28 bg-[#fafaf9] text-zinc-900 border-b border-zinc-200/90 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-10 border-b border-[#EAE4D9]">
-          <div className="space-y-4 max-w-2xl">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-[1.5px] bg-[#C5A880]"></span>
-              <span className="text-xs uppercase font-extrabold tracking-[0.25em] text-[#C5A880]">
-                {venture.whyChooseEyebrow || 'Investment Thesis'}
-              </span>
-            </div>
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#0B1B3D] leading-tight">
-              {venture.whyChooseTitle || 'An Unrivalled Convergence of Connectivity, Economy & Legal Security'}
-            </h2>
-          </div>
-
-          <p className="text-base text-[#556477] font-light leading-relaxed max-w-md">
-            {venture.whyChooseSubtitle || `Every plot within ${venture.title} is vetted to institutional-grade standards, offering immediate legal possession and unmatched capital growth potential.`}
-          </p>
+        <div className="max-w-3xl mb-16">
+          <Badge variant="outline" className="mb-4 text-xs font-mono tracking-wider uppercase border-emerald-600/30 text-emerald-700 bg-emerald-50">
+            {venture.whyChooseEyebrow || 'Strategic Investment Thesis'}
+          </Badge>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-zinc-900 tracking-tight">
+            {venture.whyChooseTitle || 'Engineered for Generational Growth & Title Certainty'}
+          </h2>
+          {Boolean(venture.whyChooseSubtitle && venture.whyChooseSubtitle.trim()) && (
+            <p className="text-base text-zinc-600 mt-4 leading-relaxed font-normal">
+              {venture.whyChooseSubtitle}
+            </p>
+          )}
         </div>
 
-        {/* 3 Architectural Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#EAE4D9]">
-          {pillars.map((p, idx) => (
-            <div
+        {/* Pillars Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {pillars.map((pillar, idx) => (
+            <Card
               key={idx}
-              className={`space-y-6 ${idx === 0 ? 'md:pr-10' : idx === 1 ? 'md:px-10 py-8 md:py-0' : 'md:pl-10 pt-8 md:pt-0'}`}
+              className="bg-white border-zinc-200/90 hover:border-emerald-500/40 hover:shadow-xl transition-all duration-300 flex flex-col group"
             >
-              <div className="flex items-center justify-between">
-                <span className="font-serif text-3xl font-bold text-[#C5A880]">{p.num}</span>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-[#8C7D6B] px-3 py-1 rounded-sm bg-[#FAF8F5] border border-[#EAE4D9]">
-                  {p.tag}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="font-serif text-2xl font-bold text-[#0B1B3D] tracking-tight">
-                  {p.title}
-                </h3>
-                <p className="text-sm text-[#556477] font-light leading-relaxed">{p.desc}</p>
-              </div>
-
-              {p.points && p.points.length > 0 && (
-                <div className="pt-4 border-t border-[#EAE4D9] space-y-2.5">
-                  {p.points.map((pt, pIdx) => (
-                    <div key={pIdx} className="flex items-start gap-2.5 text-xs text-[#556477]">
-                      <span className="text-[#C5A880] font-bold">—</span>
-                      <span>{pt}</span>
-                    </div>
-                  ))}
+              <div className="p-6 sm:p-7 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    {getIcon(pillar.tag, pillar.icon)}
+                  </div>
+                  <span className="font-mono text-xs text-zinc-400 font-bold">
+                    0{idx + 1}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {/* Institutional Proof Strip - Project Development Specifications */}
-        <div className="bg-[#0B1B3D] text-white p-8 sm:p-10 rounded-sm grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-4 divide-y sm:divide-y-0 lg:divide-x divide-white/10 shadow-xl">
-          {specs.map((s, idx) => (
-            <div key={idx} className={`space-y-1.5 pt-4 sm:pt-0 ${idx > 0 ? 'lg:pl-6' : ''}`}>
-              <span
-                className={`font-serif text-3xl sm:text-4xl font-bold block ${
-                  idx % 2 === 0 ? 'text-[#C5A880]' : idx === 4 ? 'text-emerald-400' : 'text-white'
-                }`}
-              >
-                {s.value}
-              </span>
-              <span className="text-xs uppercase tracking-widest text-white/90 font-bold block">
-                {s.label}
-              </span>
-              <p className="text-[11px] text-white/60 font-light">{s.sub}</p>
-            </div>
+                <div>
+                  <Badge variant="secondary" className="mb-2 text-[11px] font-mono bg-zinc-100 text-zinc-700 border-zinc-200">
+                    {pillar.tag}
+                  </Badge>
+                  <CardTitle className="text-xl font-bold text-zinc-900 group-hover:text-emerald-700 transition-colors">
+                    {pillar.title}
+                  </CardTitle>
+                </div>
+
+                <CardDescription className="text-zinc-600 text-sm leading-relaxed font-normal">
+                  {pillar.description}
+                </CardDescription>
+              </div>
+            </Card>
           ))}
         </div>
       </div>

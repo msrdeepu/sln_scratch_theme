@@ -5,7 +5,7 @@ import { micrositeService } from '../services/micrositeService';
 import { SITE_CONFIG } from '../siteConfig';
 
 interface ContactFormSectionProps {
-  theme: TemplateTheme;
+  theme?: any;
   venture: VentureData;
   onSubmitSuccess?: () => void;
   selectedPlot?: InteractiveMapPlot | null;

@@ -1,508 +1,267 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { TemplateTheme, VentureData } from '../types';
+import React, { useState, useEffect } from 'react';
+import {
+  MapPin,
+  Box as BoxIcon,
+  Calendar,
+  ArrowRight,
+  Maximize2,
+  X,
+} from 'lucide-react';
+import type { VentureData } from '../types';
+import { micrositeService } from '../services/micrositeService';
+import { SITE_CONFIG } from '../siteConfig';
 
 interface HeroSectionProps {
-  theme: TemplateTheme;
   venture: VentureData;
-  onEnquireClick: () => void;
-  onBrochureClick: () => void;
 }
 
-interface ParsedVideo {
-  type: 'vimeo' | 'youtube';
-  ambientUrl: string;
-  modalUrl: string;
-  rawId: string;
-}
+export default function HeroSection({ venture }: HeroSectionProps) {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [plotStats, setPlotStats] = useState<{ total: number | null; available: number | null }>({
+    total: venture.totalPlotsCount ?? null,
+    available: venture.availablePlotsCount ?? null,
+  });
 
-function parseHeroVideo(rawIdOrUrl?: string | null): ParsedVideo | null {
-  const input = (rawIdOrUrl || '').trim();
-  if (!input) return null;
-
-  // 1. YouTube
-  const ytMatch = input.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (ytMatch) {
-    const id = ytMatch[1];
-    return {
-      type: 'youtube',
-      ambientUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1`,
-      modalUrl: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&controls=1&rel=0`,
-      rawId: id,
-    };
-  }
-
-  // 2. Vimeo (extract numerical ID, zero hardcoded default)
-  const vimeoMatch = input.match(/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)(\d{6,12})/);
-  if (vimeoMatch) {
-    const vimeoId = vimeoMatch[1];
-    return {
-      type: 'vimeo',
-      ambientUrl: `https://player.vimeo.com/video/${vimeoId}?autoplay=1&muted=1&loop=1&autopause=0&controls=0&playsinline=1&title=0&byline=0&portrait=0`,
-      modalUrl: `https://player.vimeo.com/video/${vimeoId}?autoplay=1&loop=1&title=1&byline=0&portrait=0&color=C5A880`,
-      rawId: vimeoId,
-    };
-  }
-
-  if (/^\d{6,12}$/.test(input)) {
-    return {
-      type: 'vimeo',
-      ambientUrl: `https://player.vimeo.com/video/${input}?autoplay=1&muted=1&loop=1&autopause=0&controls=0&playsinline=1&title=0&byline=0&portrait=0`,
-      modalUrl: `https://player.vimeo.com/video/${input}?autoplay=1&loop=1&title=1&byline=0&portrait=0&color=C5A880`,
-      rawId: input,
-    };
-  }
-
-  return null;
-}
-
-export default function HeroSection({
-  theme,
-  venture,
-  onEnquireClick,
-  onBrochureClick,
-}: HeroSectionProps) {
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [isImageFullscreen, setIsImageFullscreen] = useState<boolean>(false);
-  const [isMuted, setIsMuted] = useState<boolean>(true);
-
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const playerContainerRef = useRef<HTMLDivElement>(null);
-
+  // Query live properties from Property model for this venture (Total Plots & Available Plots)
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const active = !!(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
-      );
-      setIsFullscreen(active);
-    };
+    const vId = venture.ventureId || (venture as any).venture_id || SITE_CONFIG.activeVentureId;
+    if (vId) {
+      micrositeService.fetchPropertyStats(vId).then((res) => {
+        if (res) {
+          setPlotStats({
+            total: res.total_plots,
+            available: res.available_plots,
+          });
+        }
+      });
+    }
+  }, [venture.ventureId]);
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
+  // Close lightbox on Escape key
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isFullscreen) {
-        handleToggleFullscreen();
-      }
-      if (e.key === 'Escape' && isImageFullscreen) {
-        setIsImageFullscreen(false);
+      if (e.key === 'Escape' && isPreviewOpen) {
+        setIsPreviewOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPreviewOpen]);
 
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isFullscreen]);
+  const heroImageSrc = venture.heroBanner;
 
-  const handleToggleFullscreen = () => {
-    const container = playerContainerRef.current;
-    const isDocFs = !!(
-      document.fullscreenElement ||
-      (document as any).webkitFullscreenElement ||
-      (document as any).mozFullScreenElement ||
-      (document as any).msFullscreenElement
-    );
+  // Use custom background cover image if uploaded in admin, fallback to site photo or hero banner
+  const bgCoverImage =
+    venture.heroBgImage ||
+    venture.aboutImage ||
+    venture.heroBanner ||
+    '';
 
-    if (!isDocFs && !isFullscreen) {
-      if (container) {
-        if (container.requestFullscreen) {
-          container.requestFullscreen().catch(() => {
-            setIsFullscreen(true);
-          });
-        } else if ((container as any).webkitRequestFullscreen) {
-          (container as any).webkitRequestFullscreen();
-        } else if ((container as any).mozRequestFullScreen) {
-          (container as any).mozRequestFullScreen();
-        } else if ((container as any).msRequestFullscreen) {
-          (container as any).msRequestFullscreen();
-        } else {
-          setIsFullscreen(true);
-        }
-      } else {
-        setIsFullscreen(true);
-      }
-    } else {
-      if (document.exitFullscreen && isDocFs) {
-        document.exitFullscreen().catch(() => {});
-      } else if ((document as any).webkitExitFullscreen && isDocFs) {
-        (document as any).webkitExitFullscreen();
-      } else if ((document as any).mozCancelFullScreen && isDocFs) {
-        (document as any).mozCancelFullScreen();
-      } else if ((document as any).msExitFullscreen && isDocFs) {
-        (document as any).msExitFullscreen();
-      }
-      setIsFullscreen(false);
-    }
-  };
-
-  const videoMeta = React.useMemo(() => {
-    return parseHeroVideo(venture.vimeoId || venture.vimeoUrl);
-  }, [venture.vimeoId, venture.vimeoUrl]);
-
-  const specsList: Array<{ value: string; label: string; sub?: string }> =
-    (venture.specs && venture.specs.length > 0 ? venture.specs : null) ||
-    (venture.stats && venture.stats.length > 0 ? venture.stats : null) ||
-    [];
-
-  // Shorter version (top 3 items) of the Specs Banner
-  const heroSpecs = React.useMemo(() => {
-    if (specsList.length >= 3) {
-      return specsList.slice(0, 3);
-    }
-    if (specsList.length > 0) {
-      return specsList;
-    }
-    return [
-      { value: '180+', label: 'GATED VILLA PLOTS', sub: 'DTCP & RERA Approved' },
-      { value: '40 & 50 Ft', label: 'INTERNAL BLACKTOP AVENUES', sub: 'Engineered for Heavy Traffic' },
-      { value: '100%', label: 'VAASTU ORIENTATION', sub: 'East & North Facing Alignments' },
-    ];
-  }, [specsList]);
-
-  // Seamless volume toggle via postMessage without crashing browser unload policy
-  const handleToggleSound = () => {
-    const nextMuted = !isMuted;
-    setIsMuted(nextMuted);
-
-    if (iframeRef.current?.contentWindow) {
-      try {
-        iframeRef.current.contentWindow.postMessage(
-          JSON.stringify({ method: 'setVolume', value: nextMuted ? 0 : 1 }),
-          '*'
-        );
-        iframeRef.current.contentWindow.postMessage(
-          JSON.stringify({ method: 'setMuted', value: nextMuted }),
-          '*'
-        );
-      } catch (err) {
-        console.warn('Vimeo postMessage volume toggle:', err);
-      }
-    }
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   return (
-    <>
-      <section
-        id="hero"
-        className="relative bg-[#07132B] text-white pt-2 pb-6 sm:pt-3 sm:pb-8 lg:pt-4 lg:pb-8 border-b border-[#0B1B3D] overflow-hidden"
-      >
-        {/* Subtle Architectural Grid Background Accent */}
+    <section
+      id="hero"
+      className="relative min-h-[92vh] lg:min-h-screen w-full pt-28 lg:pt-32 pb-16 lg:pb-20 flex flex-col justify-center overflow-hidden antialiased text-zinc-900 bg-[#faf9f5]"
+    >
+      {/* ========================================================================= */}
+      {/* BIG COVER IMAGE IN BACKGROUND (DAY THEME WITH SUNLIT LUXURY OVERLAYS)     */}
+      {/* ========================================================================= */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
+        {bgCoverImage && (
+          <img
+            src={bgCoverImage}
+            alt={`${venture.title} Cover Background`}
+            className="w-full h-full object-cover object-center scale-102 filter brightness-[0.98] contrast-[1.02]"
+            loading="eager"
+          />
+        )}
+
+        {/* Multi-angle sunlit day gradient overlays: daylight vibrancy with flawless readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#faf9f5]/96 via-[#faf9f5]/88 to-[#faf9f5]/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#faf9f5] via-transparent to-[#faf9f5]/60" />
+
+        {/* Ambient atmospheric day glow */}
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-emerald-100/35 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-amber-100/30 rounded-full blur-3xl" />
+
+        {/* Subtle architectural precision dot grid */}
         <div
-          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          className="absolute inset-0 opacity-[0.035]"
           style={{
-            backgroundImage: 'radial-gradient(#C5A880 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
+            backgroundImage: 'radial-gradient(circle at 1px 1px, #0f172a 1px, transparent 0)',
+            backgroundSize: '32px 32px',
           }}
         />
+      </div>
 
-        {/* Ambient Atmospheric Luxury Glows */}
-        <div className="absolute top-0 left-1/4 w-[500px] h-[350px] bg-radial from-[#C5A880]/15 via-transparent to-transparent blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-10 w-[450px] h-[300px] bg-radial from-[#1E3A8A]/25 via-transparent to-transparent blur-[90px] pointer-events-none" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 my-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
 
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12 relative z-10">
-          {/* Main Dual-Device Architectural Composition */}
-          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-10 xl:gap-14 lg:items-center">
-            
-            {/* ─── COLUMN A: Editorial & Identity (Desktop: Left Col, Mobile: Header + Bottom CTA) ─── */}
-            <div className="lg:col-span-5 flex flex-col space-y-3 sm:space-y-3.5 text-center lg:text-left">
-              {/* Category Eyebrow (Only rendered when present in CMS) */}
-              {venture.welcomeEyebrow && venture.welcomeEyebrow.trim() !== '' && (
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-white/5 border border-[#C5A880]/40 text-[#C5A880] text-[10px] sm:text-[10.5px] uppercase font-bold tracking-[0.2em] shadow-xs backdrop-blur-xs">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#C5A880] animate-pulse"></span>
-                    <span>{venture.welcomeEyebrow}</span>
-                  </div>
-                </div>
+          {/* ========================================================================= */}
+          {/* LEFT COLUMN: Venture Title, Location, Narrative, 3 Specs, Two CTAs (7 Cols)*/}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-7 space-y-6 lg:space-y-7">
+
+            {/* Monumental Venture Title */}
+            <div>
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-serif font-black tracking-tight leading-[1.05] text-zinc-950 text-balance">
+                {venture.title}
+              </h1>
+            </div>
+
+            {/* Narrative & Location Pill */}
+            <div className="space-y-3.5 max-w-2xl">
+              {(venture.subheadline ||
+                venture.tagline ||
+                (venture.headline && venture.headline !== venture.title ? venture.headline : '')) && (
+                <p className="text-base sm:text-lg text-zinc-600 font-normal leading-relaxed">
+                  {venture.subheadline || venture.tagline || venture.headline}
+                </p>
               )}
 
-              {/* Grand Headline */}
-              <div className="space-y-1">
-                <h1 className="font-serif text-2xl sm:text-4xl lg:text-4xl xl:text-[2.75rem] font-bold tracking-tight text-white leading-tight lg:leading-[1.1]">
-                  {venture.headline || venture.title}
-                  {venture.location && (
-                    <span className="italic font-normal font-serif text-[#C5A880] block sm:inline lg:block xl:inline sm:ml-2 lg:ml-0 xl:ml-2">
-                      at {venture.location}
-                    </span>
-                  )}
-                </h1>
-              </div>
-
-              {/* Subheadline (Desktop Only in this position) */}
-              <p className="hidden lg:block text-xs sm:text-sm text-slate-300 font-light leading-relaxed max-w-lg">
-                {venture.subheadline ||
-                  venture.tagline ||
-                  (venture.overviewText && venture.overviewText[0]) ||
-                  'A master-planned residential plotted community engineered for generational wealth, immediate spot registration, and high-capital appreciation.'}
-              </p>
-
-              {/* Desktop 3-Metric Horizon Dock (Shorter Version of Specs Banner) */}
-              <div className="hidden lg:grid grid-cols-3 divide-x divide-white/10 p-3 rounded-xl bg-white/5 border border-white/15 backdrop-blur-md shadow-lg">
-                {heroSpecs.map((s, idx) => (
-                  <div key={idx} className="space-y-0.5 text-center px-2">
-                    <span className="text-[9.5px] uppercase font-bold tracking-wider text-[#C5A880] block truncate">
-                      {s.label}
-                    </span>
-                    <span className="font-serif text-lg xl:text-xl font-bold text-white block truncate">
-                      {s.value}
-                    </span>
-                    <span className="text-[9.5px] text-slate-300 block truncate" title={s.sub}>
-                      {s.sub}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Duo Buttons */}
-              <div className="hidden lg:flex items-center gap-3.5 pt-1">
-                <button
-                  type="button"
-                  onClick={onEnquireClick}
-                  className="px-7 py-3.5 rounded-sm bg-[#C5A880] hover:bg-[#b8986c] text-[#07132B] text-xs font-bold uppercase tracking-[0.16em] transition-all duration-300 shadow-[0_8px_20px_rgba(197,168,128,0.3)] hover:shadow-[0_12px_25px_rgba(197,168,128,0.45)] hover:-translate-y-0.5 cursor-pointer flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-[17px]">calendar_month</span>
-                  <span>Schedule Site Visit</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el =
-                      document.getElementById('about') || document.getElementById('why-choose');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="px-7 py-3.5 rounded-sm bg-white/10 hover:bg-white/15 text-white border border-white/20 hover:border-[#C5A880] text-xs font-bold uppercase tracking-[0.16em] transition-all duration-300 backdrop-blur-xs hover:-translate-y-0.5 cursor-pointer flex items-center gap-2"
-                >
-                  <span>Know More</span>
-                  <span className="material-symbols-outlined text-[15px] text-[#C5A880]">
-                    arrow_forward
-                  </span>
-                </button>
-              </div>
+              {venture.location && (
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-zinc-800 bg-white/90 backdrop-blur-md border border-zinc-200/90 w-fit px-3.5 py-1.5 rounded-xl shadow-xs">
+                  <MapPin className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>{venture.location}</span>
+                </div>
+              )}
             </div>
 
-            {/* ─── COLUMN B: Visual Cinema Stage (Video OR 535x690 Showcase Image) ─── */}
-            {videoMeta ? (
-              <div className="lg:col-span-7 mt-5 sm:mt-8 lg:mt-0">
-                {/* The Cinematic Media Card */}
-                <div className="relative rounded-2xl p-1.5 sm:p-2.5 bg-white/5 border border-white/15 backdrop-blur-md shadow-[0_25px_70px_rgba(0,0,0,0.5)]">
-                  {/* Media Screen Header (No Photos toggle) */}
-                  <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 border-b border-white/10 bg-white/5 rounded-t-xl">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                      <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-white">
-                        Live 4K Drone Film
+            {/* Dynamic Metric Specs: 3 Cards */}
+            {(() => {
+              // 1. Total Acres (Manual Entry from admin specs)
+              const acresSpec = Array.isArray(venture.specs)
+                ? venture.specs.find((s) => /acre/i.test(s.label || '')) || venture.specs[0]
+                : null;
+              const acresVal = acresSpec?.value || '10';
+              const acresLabel = acresSpec?.label && /acre/i.test(acresSpec.label) ? acresSpec.label.toUpperCase() : 'TOTAL ACRES';
+              const acresSub = acresSpec?.sub || 'DTCP & RERA Approved';
+
+              // 2. Total Plots (From Property model query)
+              const plotsSpec = Array.isArray(venture.specs)
+                ? venture.specs.find((s) => /plot/i.test(s.label || ''))
+                : null;
+              const totalPlotsVal =
+                plotStats.total != null && plotStats.total > 0
+                  ? String(plotStats.total)
+                  : venture.totalPlotsCount != null && venture.totalPlotsCount > 0
+                  ? String(venture.totalPlotsCount)
+                  : venture.totalPlots || plotsSpec?.value || '131';
+              const totalPlotsLabel = 'TOTAL PLOTS';
+              const totalPlotsSub = plotsSpec?.sub || 'Engineered for Heavy Traffic';
+
+              // 3. Available Plots (From Property model where status == 'Available')
+              const availablePlotsVal =
+                plotStats.available != null
+                  ? String(plotStats.available)
+                  : venture.availablePlotsCount != null
+                  ? String(venture.availablePlotsCount)
+                  : '128';
+              const availablePlotsLabel = 'AVAILABLE PLOTS';
+              const availablePlotsSub = 'East & North Facing Alignments';
+
+              const cards = [
+                { label: acresLabel, value: acresVal, sub: acresSub },
+                { label: totalPlotsLabel, value: totalPlotsVal, sub: totalPlotsSub },
+                { label: availablePlotsLabel, value: availablePlotsVal, sub: availablePlotsSub },
+              ];
+
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 max-w-xl pt-1">
+                  {cards.map((spec, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white/92 hover:bg-white backdrop-blur-md rounded-2xl p-3.5 sm:p-4 border border-zinc-200/90 shadow-xs hover:shadow-md transition-all"
+                    >
+                      <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-zinc-400 block mb-0.5 truncate">
+                        {spec.label}
                       </span>
-                      <span className="text-[10px] text-slate-400 hidden sm:inline">
-                        • {venture.location || 'Venture'} Aerial Survey
+                      <span className="text-xl sm:text-2xl font-bold font-serif text-zinc-900 block truncate">
+                        {spec.value}
                       </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#C5A880]">
-                      <span className="px-2.5 py-0.5 rounded-sm bg-white/10 text-white font-mono text-[10px] tracking-widest">
-                        {videoMeta.type === 'youtube' ? 'YOUTUBE 4K' : 'VIMEO 4K'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Viewport Screen with Video Player */}
-                  <div
-                    ref={playerContainerRef}
-                    className={`relative ${
-                      isFullscreen
-                        ? 'fixed inset-0 z-[99999] w-screen h-screen bg-black rounded-none flex items-center justify-center'
-                        : 'aspect-[16/10] sm:aspect-[16/9] lg:aspect-[16/10] xl:aspect-[16/9] bg-black overflow-hidden rounded-b-xl'
-                    } group transition-all duration-200`}
-                  >
-                    <iframe
-                      ref={iframeRef}
-                      key={videoMeta.ambientUrl}
-                      src={videoMeta.ambientUrl}
-                      title={`${venture.title} 4K Aerial Video`}
-                      allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-                      className="w-full h-full object-cover block border-0"
-                      style={{ border: 0 }}
-                    />
-
-                    {/* Interactive Controls Overlay */}
-                    <div className={`absolute ${isFullscreen ? 'top-5 right-5 sm:top-6 sm:right-6' : 'top-3 right-3 sm:top-4 sm:right-4'} z-20 flex items-center gap-1.5 sm:gap-2`}>
-                      <button
-                        type="button"
-                        onClick={handleToggleSound}
-                        title={isMuted ? 'Enable Sound' : 'Mute Sound'}
-                        className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-sm bg-black/80 hover:bg-black text-white text-[10px] sm:text-[11px] font-bold tracking-wider uppercase backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
-                      >
-                        <span className="material-symbols-outlined text-[14px] sm:text-[15px]">
-                          {isMuted ? 'volume_off' : 'volume_up'}
+                      {spec.sub && (
+                        <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block truncate">
+                          {spec.sub}
                         </span>
-                        <span className="hidden xs:inline">{isMuted ? 'Sound Off' : 'Sound On'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleToggleFullscreen}
-                        title={isFullscreen ? 'Exit Fullscreen' : 'Open Fullscreen View'}
-                        className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-sm bg-black/80 hover:bg-black text-white text-[10px] sm:text-[11px] font-bold tracking-wider uppercase backdrop-blur-md border border-white/20 transition-all cursor-pointer shadow-md flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[15px] sm:text-[16px] block">
-                          {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-                        </span>
-                        {isFullscreen && <span>Exit</span>}
-                      </button>
+                      )}
                     </div>
-
-                    {/* Bottom Gradient Label */}
-                    <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none flex items-end justify-between text-white">
-                      <div>
-                        <span className="text-xs sm:text-sm font-serif font-bold block text-white">
-                          {venture.title} Aerial Survey
-                        </span>
-                        <span className="text-[9px] sm:text-[11px] text-slate-300 block">
-                          {venture.location || 'Prime Corridor'} • Actual Site Footage
-                        </span>
-                      </div>
-                      <span className="text-[9px] sm:text-xs font-mono text-[#C5A880] uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded border border-white/15">
-                        4K UHD
-                      </span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
-            ) : (
-              <div className="lg:col-span-7 mt-5 sm:mt-8 lg:mt-0 flex justify-center lg:justify-end">
-                {/* The High-Precision Showcase Frame Tailored to 535x690 */}
-                <div className="relative rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 bg-white/5 border border-[#C5A880]/30 backdrop-blur-md shadow-[0_25px_70px_rgba(0,0,0,0.6)]">
-                  {/* Viewport Screen with Exact 535x690 Showcase Image */}
-                  <div
-                    onClick={() => setIsImageFullscreen(true)}
-                    className="relative aspect-[535/690] w-full max-w-[360px] sm:max-w-[400px] lg:max-w-[440px] xl:max-w-[480px] max-h-[580px] xl:max-h-[620px] bg-black/60 overflow-hidden rounded-xl sm:rounded-2xl group cursor-pointer"
-                    title="Click to view full screen"
-                  >
-                    {venture.heroBanner ? (
-                      <img
-                        src={venture.heroBanner}
-                        alt={`${venture.title} Official Showcase`}
-                        className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500 ease-out select-none"
-                        loading="eager"
-                        width={535}
-                        height={690}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 font-mono text-sm bg-black/40">
-                        Official Showcase Preview (535 × 690)
-                      </div>
-                    )}
+              );
+            })()}
 
-                    {/* Slim Floating Full Screen Trigger Pill in Top Corner */}
-                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-20">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsImageFullscreen(true);
-                        }}
-                        className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-sm bg-black/80 hover:bg-black text-white text-[10px] sm:text-[11px] font-bold tracking-wider uppercase backdrop-blur-md border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105"
-                      >
-                        <span className="material-symbols-outlined text-[15px] sm:text-[16px] text-[#C5A880]">
-                          fullscreen
-                        </span>
-                        <span>Full Screen</span>
-                      </button>
-                    </div>
+            {/* Action Row: Two CTAs */}
+            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:gap-4 pt-2 w-full">
+              {/* CTA 1: Explore 3D Master Plan */}
+              <button
+                type="button"
+                onClick={() => scrollToSection('master-plan')}
+                className="w-full sm:w-auto px-4 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-sans font-extrabold text-[11.5px] sm:text-xs md:text-sm tracking-wide uppercase shadow-lg shadow-emerald-900/15 hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 group text-center"
+              >
+                <BoxIcon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span className="sm:hidden">Explore 3D Plan</span>
+                <span className="hidden sm:inline">Explore 3D Master Plan</span>
+                <ArrowRight className="h-4 w-4 shrink-0 hidden md:inline transition-transform group-hover:translate-x-1" />
+              </button>
 
-                    {/* Bottom Gradient Label */}
-                    <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none flex items-end justify-between text-white">
-                      <div>
-                        <span className="text-xs sm:text-sm font-serif font-bold block text-white">
-                          {venture.title} Official Showcase
-                        </span>
-                        <span className="text-[9px] sm:text-[11px] text-slate-300 block">
-                          {venture.location || 'Prime Corridor'} • Verified Master Layout
-                        </span>
-                      </div>
-                      <span className="text-[9px] sm:text-xs font-mono text-[#C5A880] uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded border border-white/15">
-                        HD
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ─── MOBILE-ONLY SECTION: Micro-Stats Dock + Description + Mobile Buttons ─── */}
-            <div className="lg:hidden mt-5 space-y-4">
-              {/* Single-Row Compact Fact Dock on Mobile */}
-              <div className="grid grid-cols-3 divide-x divide-white/10 p-3 rounded-xl bg-white/5 border border-white/15 backdrop-blur-md shadow-lg">
-                {heroSpecs.map((s, idx) => (
-                  <div key={idx} className="space-y-0.5 text-center px-1">
-                    <span className="text-[9px] uppercase font-bold tracking-wider text-[#C5A880] block truncate">
-                      {s.label}
-                    </span>
-                    <span className="font-serif text-base sm:text-lg font-bold text-white block truncate">
-                      {s.value}
-                    </span>
-                    <span className="text-[8px] sm:text-[9px] text-slate-300 block truncate" title={s.sub}>
-                      {s.sub}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Mobile Description */}
-              <p className="text-xs sm:text-sm text-slate-300 font-light leading-relaxed text-center px-2">
-                {venture.subheadline ||
-                  venture.tagline ||
-                  (venture.overviewText && venture.overviewText[0]) ||
-                  'A master-planned residential plotted community engineered for generational wealth, immediate spot registration, and high-capital appreciation.'}
-              </p>
-
-              {/* Mobile 2-Button Grid */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={onEnquireClick}
-                  className="py-3 rounded-sm bg-[#C5A880] text-[#07132B] text-xs font-bold uppercase tracking-[0.14em] shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-                  <span>Site Visit</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const el =
-                      document.getElementById('about') || document.getElementById('why-choose');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="py-3 rounded-sm bg-white/10 text-white border border-white/20 text-xs font-bold uppercase tracking-[0.14em] backdrop-blur-xs flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>Know More</span>
-                  <span className="material-symbols-outlined text-[14px] text-[#C5A880]">
-                    arrow_forward
-                  </span>
-                </button>
-              </div>
+              {/* CTA 2: Schedule Site Visit */}
+              <button
+                type="button"
+                onClick={() => scrollToSection('contact')}
+                className="w-full sm:w-auto px-4 sm:px-7 py-3.5 sm:py-4 rounded-2xl bg-white hover:bg-zinc-50 text-zinc-800 font-bold text-[11.5px] sm:text-xs md:text-sm border border-zinc-300 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 text-center"
+              >
+                <Calendar className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span className="sm:hidden">Site Visit</span>
+                <span className="hidden sm:inline">Schedule Site Visit</span>
+              </button>
             </div>
-
           </div>
-        </div>
-      </section>
 
-      {/* Lightbox / High-Resolution Image Preview Modal */}
-      {isImageFullscreen && (
+          {/* ========================================================================= */}
+          {/* RIGHT COLUMN: Striking Visual Showcase Banner (5 Cols, 535x690)           */}
+          {/* ========================================================================= */}
+          <div className="lg:col-span-5 relative flex justify-center">
+            {/* Ambient Backlight */}
+            <div className="absolute -inset-2 bg-gradient-to-tr from-emerald-500/15 via-teal-400/10 to-amber-400/20 rounded-[34px] blur-2xl opacity-80 -z-10" />
+
+            {/* The High-Precision Showcase Frame (535x690) */}
+            <div
+              onClick={() => setIsPreviewOpen(true)}
+              className="relative rounded-[28px] sm:rounded-[32px] overflow-hidden bg-white border border-zinc-200/90 shadow-2xl aspect-[535/690] w-full max-w-[440px] sm:max-w-[480px] lg:max-w-[500px] xl:max-w-[535px] max-h-[690px] group cursor-pointer transition-all duration-300 ease-out hover:-translate-y-1"
+              title="Click to view full screen"
+            >
+              {heroImageSrc ? (
+                <img
+                  src={heroImageSrc}
+                  alt={`${venture.title} Striking Visual Showcase`}
+                  className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-500 ease-out select-none"
+                  loading="eager"
+                  width={535}
+                  height={690}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-100 text-zinc-400 gap-2">
+                  <Maximize2 className="w-12 h-12 text-zinc-400" />
+                  <span className="text-xs font-mono">Official Showcase (535 × 690)</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* High-Resolution Master Showcase Lightbox Modal */}
+      {isPreviewOpen && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[99999] bg-[#07132B]/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
-          onClick={() => setIsImageFullscreen(false)}
+          className="fixed inset-0 z-[99999] bg-zinc-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
+          onClick={() => setIsPreviewOpen(false)}
         >
           {/* Header Bar */}
           <div
@@ -510,15 +269,15 @@ export default function HeroSection({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2.5">
-              <span className="w-8 h-8 rounded-lg bg-[#C5A880]/20 border border-[#C5A880]/40 flex items-center justify-center text-[#C5A880]">
-                <span className="material-symbols-outlined text-[18px]">photo_library</span>
+              <span className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
+                <Maximize2 className="w-4 h-4" />
               </span>
               <div>
                 <h3 className="text-sm sm:text-base font-bold font-serif text-white tracking-wide">
                   {venture.title} — Official Showcase
                 </h3>
-                <p className="text-[10px] sm:text-xs text-slate-400 font-mono">
-                  High-Resolution Master Showcase Preview (535 × 690)
+                <p className="text-[10px] sm:text-xs text-zinc-400 font-mono">
+                  High-Resolution Master Showcase Preview
                 </p>
               </div>
             </div>
@@ -526,34 +285,34 @@ export default function HeroSection({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsImageFullscreen(false)}
+                onClick={() => setIsPreviewOpen(false)}
                 className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
                 title="Close"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Full-View Image Container */}
           <div
-            className="relative w-full max-w-5xl max-h-[82vh] my-auto flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-black/60 p-2"
+            className="relative w-full max-w-5xl max-h-[80vh] my-auto flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-black/60 p-2"
             onClick={(e) => e.stopPropagation()}
           >
-            {venture.heroBanner && (
+            {heroImageSrc && (
               <img
-                src={venture.heroBanner}
+                src={heroImageSrc}
                 alt={`${venture.title} High Resolution Preview`}
-                className="max-w-full max-h-[78vh] object-contain rounded-xl shadow-2xl"
+                className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl"
               />
             )}
           </div>
 
-          <p className="text-[11px] font-mono text-slate-400 mt-2">
+          <p className="text-[11px] font-mono text-zinc-400 mt-2">
             Click anywhere outside or press Esc to return
           </p>
         </div>
       )}
-    </>
+    </section>
   );
 }

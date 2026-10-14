@@ -1,47 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { TEMPLATES } from './themes';
-import { SAMPLE_VENTURES } from './sampleData';
-import { TemplateTheme, VentureData } from './types';
+import { VentureData } from './types';
 import { SITE_CONFIG } from './siteConfig';
 import { micrositeService } from './services/micrositeService';
+import { updateDocumentSeo } from './utils/seoManager';
+
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
+import CinematicVideoSection from './components/CinematicVideoSection';
+import DevelopmentHighlightsSection from './components/DevelopmentHighlightsSection';
+import StatsBadges from './components/StatsBadges';
 import WhyChooseSection from './components/WhyChooseSection';
 import AboutSection from './components/AboutSection';
 import AmenitiesSection from './components/AmenitiesSection';
-import BrochureBanner from './components/BrochureBanner';
-import NeighbourhoodSection from './components/NeighbourhoodSection';
-import LocationsSection from './components/LocationsSection';
 import MasterPlanSection from './components/MasterPlanSection';
+import LocationsSection from './components/LocationsSection';
+import BrochureBanner from './components/BrochureBanner';
 import FaqSection from './components/FaqSection';
 import ContactFormSection from './components/ContactFormSection';
-import { FooterSection } from './components/FooterSection';
+import FooterSection from './components/FooterSection';
 import MicrositeSkeleton from './components/MicrositeSkeleton';
 import ElevenLabsWidgets from './components/ElevenLabsWidgets';
 import { InteractiveMapPlot } from './types/interactiveMap';
-import { updateDocumentSeo } from './utils/seoManager';
 
 export default function App() {
-  const initialTheme =
-    TEMPLATES.find((t) => t.id === SITE_CONFIG.defaultThemeId) || TEMPLATES[0];
-  const [currentTheme, setCurrentTheme] = useState<TemplateTheme>(initialTheme);
   const [currentVenture, setCurrentVenture] = useState<VentureData | null>(null);
   const [isLoadingLiveVenture, setIsLoadingLiveVenture] = useState<boolean>(true);
   const [selectedPlotForEnquiry, setSelectedPlotForEnquiry] = useState<InteractiveMapPlot | null>(null);
-  const [sectionVisibility, setSectionVisibility] = useState<Record<string, boolean>>({
-    hero: true,
-    whyChoose: true,
-    stats: false,
-    about: true,
-    amenities: true,
-    brochure: true,
-    neighbourhood: false,
-    locations: true,
-    masterPlan: true,
-    faq: true,
-    contact: true,
-    footer: true,
-  });
 
   // Load live venture data directly from CMS API on mount
   useEffect(() => {
@@ -54,16 +38,12 @@ export default function App() {
           if (live) {
             setCurrentVenture(live);
             updateDocumentSeo(live);
-          } else if (SITE_CONFIG.enableOfflineFallback) {
-            setCurrentVenture(SAMPLE_VENTURES[0]);
-            updateDocumentSeo(SAMPLE_VENTURES[0]);
+          } else {
+            console.warn('[Theme1 App] Could not load live venture');
           }
         }
       } catch (err) {
-        console.warn('Could not load live venture, falling back to local dataset:', err);
-        if (isMounted && SITE_CONFIG.enableOfflineFallback) {
-          setCurrentVenture(SAMPLE_VENTURES[0]);
-        }
+        console.warn('[Theme1 App] Error loading live venture:', err);
       } finally {
         if (isMounted) setIsLoadingLiveVenture(false);
       }
@@ -81,145 +61,90 @@ export default function App() {
     }
   }, [currentVenture]);
 
-  // Apply dynamic color palette from CMS to the theme token system.
-  // Only overrides when a saved palette is present — falls back to default theme otherwise.
+  // Apply dynamic color palette from CMS by injecting CSS custom properties
   useEffect(() => {
-    if (currentVenture?.colorPalette) {
-      const p = currentVenture.colorPalette;
-      const root = document.documentElement;
+    if (!currentVenture?.colorPalette) return;
+    const p = currentVenture.colorPalette;
+    const root = document.documentElement;
 
-      root.style.setProperty('--theme-accent', p.accent);
-      root.style.setProperty('--theme-accent-hover', p.accentHover || p.accent);
-      root.style.setProperty('--theme-primary', p.primary);
-      root.style.setProperty('--theme-bg', p.background);
-      root.style.setProperty('--theme-card-bg', p.cardBg);
-      root.style.setProperty('--theme-border', p.borderColor || '#EAE4D9');
-      document.body.style.backgroundColor = p.background;
-
-      setCurrentTheme((prev) => ({
-        ...prev,
-        textPrimary: p.textPrimary || p.primary,
-        accent: p.accent,
-        accentHover: p.accentHover,
-        accentLight: p.background,
-        bgSecondary: p.background,
-        bgCard: p.cardBg,
-        borderColor: p.borderColor,
-        heroGradient: `linear-gradient(180deg, ${p.cardBg} 0%, ${p.background} 100%)`,
-      }));
-    }
+    root.style.setProperty('--theme-accent', p.accent);
+    root.style.setProperty('--theme-accent-hover', p.accentHover || p.accent);
+    root.style.setProperty('--theme-primary', p.primary);
+    root.style.setProperty('--theme-bg', p.background);
+    root.style.setProperty('--theme-card-bg', p.cardBg);
+    root.style.setProperty('--theme-border', p.borderColor || '#EAE4D9');
+    document.body.style.backgroundColor = p.background;
   }, [currentVenture]);
 
-  const scrollToContact = () => {
-    const el = document.getElementById('contact');
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // While fetching API data, show luxury skeleton loader (no dummy data flash)
   if (isLoadingLiveVenture || !currentVenture) {
     return <MicrositeSkeleton />;
   }
 
   return (
     <div
-      className="min-h-screen transition-colors duration-500 font-sans selection:bg-amber-400 selection:text-slate-900"
+      className="min-h-screen font-sans selection:bg-rose-500/20 selection:text-rose-500 transition-colors duration-300"
       style={{
-        backgroundColor: currentTheme.bgSecondary,
-        color: currentTheme.textPrimary,
-        fontFamily: currentTheme.fontBody,
+        backgroundColor: currentVenture?.colorPalette?.background || undefined,
+        color: currentVenture?.colorPalette?.textPrimary || undefined,
       }}
     >
-          {/* Navigation Bar */}
-          <Navbar
-            theme={currentTheme}
-            venture={currentVenture}
-            onEnquireClick={scrollToContact}
-          />
+      <Navbar venture={currentVenture} />
+      <main>
+        {/* Section 1: Hero Section */}
+        <HeroSection venture={currentVenture} />
 
-          {/* 1. Hero Section */}
-          {sectionVisibility.hero && (
-            <HeroSection
-              theme={currentTheme}
-              venture={currentVenture}
-              onEnquireClick={scrollToContact}
-              onBrochureClick={scrollToContact}
-            />
-          )}
+        {/* Section 2: Cinematic Drone/Vimeo Video Section (Completely hidden if no video exists) */}
+        {(currentVenture.vimeoId || currentVenture.vimeoUrl) && (
+          <CinematicVideoSection venture={currentVenture} />
+        )}
 
-          {/* 2. Why Choose / Value Pillars */}
-          {sectionVisibility.whyChoose && (
-            <WhyChooseSection theme={currentTheme} venture={currentVenture} />
-          )}
+        {/* Section 3: Development Highlights Section */}
+        <DevelopmentHighlightsSection venture={currentVenture} />
 
-          {/* 3. About Overview */}
-          {sectionVisibility.about && (
-            <AboutSection
-              theme={currentTheme}
-              venture={currentVenture}
-              onEnquireClick={scrollToContact}
-            />
-          )}
+        {/* Section 4: Venture Snapshot / Stats Strip with 3D flip cards */}
+        <StatsBadges venture={currentVenture} />
 
-          {/* 5. World-Class Amenities */}
-          {sectionVisibility.amenities && (
-            <AmenitiesSection theme={currentTheme} venture={currentVenture} />
-          )}
+        {/* Section 5: Why This Location */}
+        <WhyChooseSection venture={currentVenture} />
 
-          {/* 6. Instant Brochure Download Banner */}
-          {sectionVisibility.brochure && (
-            <BrochureBanner
-              theme={currentTheme}
-              venture={currentVenture}
-              onDownloadClick={scrollToContact}
-            />
-          )}
+        {/* Section 6: Lifestyle & Master Planning (About) */}
+        <AboutSection venture={currentVenture} />
 
-          {/* 7. Strategic Neighbourhood Transit */}
-          {sectionVisibility.neighbourhood && (
-            <NeighbourhoodSection theme={currentTheme} venture={currentVenture} />
-          )}
+        {/* Section 7: Infrastructure & Amenities */}
+        <AmenitiesSection venture={currentVenture} />
 
-          {/* 8. Prime Nearby Locations */}
-          {sectionVisibility.locations && (
-            <LocationsSection theme={currentTheme} venture={currentVenture} />
-          )}
+        {/* Section 8: Interactive 2D & 3D Master Plan */}
+        <MasterPlanSection
+          venture={currentVenture}
+          onSelectPlotForEnquiry={setSelectedPlotForEnquiry}
+        />
 
-          {/* 9. Master Plan Cadastral Layout */}
-          {sectionVisibility.masterPlan && (
-            <MasterPlanSection
-              theme={currentTheme}
-              venture={currentVenture}
-              onEnquireClick={scrollToContact}
-              onSelectPlotForEnquiry={setSelectedPlotForEnquiry}
-            />
-          )}
+        {/* Section 9: Regional Connectivity */}
+        <LocationsSection venture={currentVenture} />
 
-          {/* 10. Frequently Asked Questions */}
-          {sectionVisibility.faq && (
-            <FaqSection theme={currentTheme} venture={currentVenture} />
-          )}
+        {/* Section 10: Official Project Brochure */}
+        <BrochureBanner venture={currentVenture} />
 
-          {/* 11. Schedule Site Visit & Inquiry Form */}
-          {sectionVisibility.contact && (
-            <ContactFormSection
-              theme={currentTheme}
-              venture={currentVenture}
-              selectedPlot={selectedPlotForEnquiry}
-            />
-          )}
+        {/* Section 11: Frequently Asked Questions */}
+        <FaqSection venture={currentVenture} />
 
-          {/* 12. Footer */}
-          {sectionVisibility.footer && (
-            <FooterSection theme={currentTheme} data={currentVenture} />
-          )}
+        {/* Section 12: VIP Site Visit Booking Form */}
+        <ContactFormSection
+          venture={currentVenture}
+          selectedPlot={selectedPlotForEnquiry}
+        />
+      </main>
 
-          {/* 13. ElevenLabs Conversational AI (Voicebot + Chatbot) */}
-          {currentVenture && (
-            <ElevenLabsWidgets
-              chatbotAgentId={currentVenture.chatbotAgentId}
-              voicebotAgentId={currentVenture.voicebotAgentId}
-            />
-          )}
+      {/* Section 13: Footer Section with dynamic 4 columns, social links, and Google Map */}
+      <FooterSection venture={currentVenture} />
+
+      {/* Real-time ElevenLabs Chat & Voice AI Assistants */}
+      {currentVenture && (
+        <ElevenLabsWidgets
+          chatbotAgentId={currentVenture.chatbotAgentId}
+          voicebotAgentId={currentVenture.voicebotAgentId}
+        />
+      )}
     </div>
   );
 }

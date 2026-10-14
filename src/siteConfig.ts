@@ -22,6 +22,7 @@ export const SITE_CONFIG = {
   apiBaseUrl: (import.meta.env.VITE_API_BASE_URL as string) || 'https://cms.slnmplapp.com/api',
 
   // ACTIVE VENTURE IDENTIFIER (Set to Venture ID, e.g. 232, or Slug)
+  activeVentureId: (import.meta.env.VITE_VENTURE_ID as string) || '232',
   ventureIdentifier: (import.meta.env.VITE_VENTURE_ID as string) || '232',
   defaultSlug: (import.meta.env.VITE_VENTURE_ID as string) || '232',
 
@@ -33,6 +34,12 @@ export const SITE_CONFIG = {
 
   // Admin Asset Base URL for blueprint images (configured from sitevars)
   adminBaseUrl: (import.meta.env.VITE_ADMIN_BASE_URL as string) || 'https://admin.slnmplapp.com',
+};
+
+export const API_ENDPOINTS = {
+  getVenturePage: (ventureId: string | number) => `${SITE_CONFIG.apiBaseUrl}/cms/ventures/${ventureId}/page`,
+  getInteractiveMap: (ventureId: string | number) => `${SITE_CONFIG.apiBaseUrl}/ventures/${ventureId}/interactive-map`,
+  submitInquiry: `${SITE_CONFIG.apiBaseUrl}/cms/leads`,
 };
 
 /**
